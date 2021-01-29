@@ -1,3 +1,4 @@
+/* My solution: */
 const levelCount = 7;
 const output = '#';
 
@@ -9,4 +10,9 @@ for (let i = 0; i < levelCount; i++) {
   }
 
   console.log(row);
+}
+
+/* Book solution: */
+for (let line = output; line.length - 1 < levelCount; line += output) {
+  console.log(line);
 }

@@ -1,4 +1,4 @@
-const rangeStart = 0;
+const rangeStart = 1;
 const rangeEnd = 100;
 
 const output1 = 'Fizz';
@@ -18,9 +18,5 @@ for (let i = rangeStart; i <= rangeEnd; i++) {
     output += output2;
   }
 
-  if (!output) {
-    output = i;
-  }
-
-  console.log(output);
+  console.log(output || i);
 }
