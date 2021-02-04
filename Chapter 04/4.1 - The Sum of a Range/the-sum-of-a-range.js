@@ -1,14 +1,23 @@
-function range(start, end) {
-  return addToArray(start);
+function range(start, end, step = 1) {
+  let numbers = [];
 
-  function addToArray(value, arr = []) {
-    if (value > end) {
-      return arr;
-    }
-
-    return addToArray(value + 1, [...arr, value]);
+  if (step > 0) {
+    for (; start <= end; start += step) numbers.push(start);
+  } else {
+    for (; start >= end; start += step) numbers.push(start);
   }
+
+  return numbers;
 }
 
-const a = range(-1, 7);
-a;
+function sum(numbers) {
+  let sum = 0;
+
+  for (n of numbers) {
+    sum += n;
+  }
+
+  return sum;
+}
+
+console.log(sum(range(1, 10)));
