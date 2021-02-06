@@ -5,14 +5,11 @@ function deepEqual(a, b) {
   if (!areObjects || areSomeNull) return a === b;
   if (Object.keys(a).length !== Object.keys(b).length) return false;
 
-  let areEqualObjects = true;
   for (const prop in a) {
-    if (!deepEqual(a[prop], b[prop])) {
-      areEqualObjects = false;
-      break;
-    }
+    if (!deepEqual(a[prop], b[prop])) return false;
   }
-  return areEqualObjects;
+
+  return true;
 }
 
 const a = { prop: 'a', prop2: { a: 'b' } };
