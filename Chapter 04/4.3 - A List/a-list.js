@@ -20,10 +20,10 @@ function prepend(value, list) {
   };
 }
 
-function nth(list, n, position = 0) {
+function nth(list, n) {
   if (!list) return undefined;
-  if (position === n) return list.value;
-  return nth(list.rest, n, ++position);
+  if (n === 0) return list.value;
+  return nth(list.rest, --n);
 }
 
 const list = arrayToList([1, 2, 3]);
