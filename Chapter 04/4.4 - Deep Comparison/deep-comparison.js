@@ -6,13 +6,13 @@ function deepEqual(a, b) {
   if (Object.keys(a).length !== Object.keys(b).length) return false;
 
   for (const prop in a) {
-    if (!deepEqual(a[prop], b[prop])) return false;
+    if (!(prop in b) || !deepEqual(a[prop], b[prop])) return false;
   }
 
   return true;
 }
 
-const a = { prop: 'a', prop2: { a: 'b' } };
-const b = { prop: 'a', prop2: { a: 'b' } };
+const a = { prop: 'a', a: { a: undefined } };
+const b = { prop: 'a', a: { b: undefined } };
 
 console.log(deepEqual(a, b));
