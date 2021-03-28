@@ -12,5 +12,7 @@ function flattenRecursive(value, result = []) {
   return result;
 }
 
-console.log(flatten([1, 2, [1, 2, 3], [2, [3], 4], [3, 2, 5]]));
-console.log(flattenRecursive([1, 2, [1, 2, 3], [2, [3], 4], [3, 2, 5]]));
+const arrayToFlatten = [1, 2, [1, 2, 3], [2, [3], 4], [3, 2, 5]];
+
+console.log(flatten(arrayToFlatten));
+console.log(flattenRecursive(arrayToFlatten));
