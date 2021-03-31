@@ -3,7 +3,7 @@ function flatten(array) {
 }
 
 function flattenRecursive(value, result = []) {
-  if (!value.forEach) {
+  if (!Array.isArray(value)) {
     result.push(value);
   } else {
     value.forEach((v) => flattenRecursive(v, result));
