@@ -154,20 +154,35 @@ function compareRobots(robotA, memoryA, robotB, memoryB) {
   return results;
 }
 
-function myRobot({ place, parcels }, route) {
+function optimizedRobot({ place, parcels }, route) {
   if (route.length == 0) {
+    const possibleRoutes = [];
+
     for (const parcel of parcels) {
       const newRoute =
         parcel.place != place
-          ? findRoute(roadGraph, place, parcel.place)
-          : findRoute(roadGraph, place, parcel.address);
+          ? { type: 'pick', route: findRoute(roadGraph, place, parcel.place) }
+          : { type: 'deliver', route: findRoute(roadGraph, place, parcel.address) };
 
-      if (!route.length || route.length > newRoute.length) {
-        route = newRoute;
-      }
+      possibleRoutes.push(newRoute);
     }
+
+    const shortestRoute = possibleRoutes.reduce((shortest, current) => {
+      const shortestRouteLength = shortest.route.length;
+      const currentRouteLength = current.route.length;
+
+      const isCurrentShorter = shortestRouteLength > currentRouteLength;
+      const isCurrentSame = shortestRouteLength === currentRouteLength;
+      const isCurrentPick = current.type === 'pick';
+
+      const isCurrentBetter = isCurrentShorter || (isCurrentSame && isCurrentPick);
+
+      return isCurrentBetter ? current : shortest;
+    });
+
+    route = shortestRoute.route;
   }
   return { direction: route[0], memory: route.slice(1) };
 }
 
-console.log(compareRobots(goalOrientedRobot, [], myRobot, []));
+console.log(compareRobots(goalOrientedRobot, [], optimizedRobot, [])); //?
