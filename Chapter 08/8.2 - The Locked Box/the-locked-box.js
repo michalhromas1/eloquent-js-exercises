@@ -1,3 +1,4 @@
+// Helper code from https://eloquentjavascript.net/
 const box = {
   locked: true,
   unlock() {
@@ -13,6 +14,7 @@ const box = {
   },
 };
 
+// Implementation
 function withBoxUnlocked(body) {
   const locked = box.locked;
   if (!locked) {
