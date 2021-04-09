@@ -39,7 +39,7 @@ function getRegex(type) {
     }
 
     case 4: {
-      return /.*ious\b/;
+      return /ious\b/;
     }
 
     case 5: {
@@ -47,11 +47,11 @@ function getRegex(type) {
     }
 
     case 6: {
-      return /\w{6,}/;
+      return /\w{7}/;
     }
 
     case 7: {
-      return /\b[^eE\s]+\b/;
+      return /\b[^e\W]+\b/i;
     }
 
     default: {
