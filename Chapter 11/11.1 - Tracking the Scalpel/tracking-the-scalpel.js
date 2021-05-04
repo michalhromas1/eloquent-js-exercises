@@ -24,8 +24,9 @@ function boilerplate() {
     'Chateau-Butcher Shop',
   ];
 
-  function storageFor(name) {
+  function getStorageFor(name) {
     let storage = Object.create(null);
+
     storage['food caches'] = ['cache in the oak', 'cache in the meadow', 'cache under the hedge'];
     storage['cache in the oak'] =
       'A hollow above the third big branch from the bottom. Several pieces of bread and a pile of acorns.';
@@ -39,34 +40,43 @@ function boilerplate() {
       'That one-legged jackdaw',
       'The boy with the airgun',
     ];
+
     if (name == 'Church Tower' || name == 'Hawthorn' || name == 'Chateau')
       storage['events on 2017-12-21'] =
         "Deep snow. Butcher's garbage can fell over. We chased off the ravens from Saint-Vulbas.";
+
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
     for (let y = 1985; y <= 2018; y++) {
       storage[`chicks in ${y}`] = hash % 6;
       hash = Math.abs((hash << 2) ^ (hash + y));
     }
+
     if (name == 'Big Oak') storage.scalpel = "Gilles' Garden";
     else if (name == "Gilles' Garden") storage.scalpel = 'Woods';
     else if (name == 'Woods') storage.scalpel = 'Chateau';
     else if (name == 'Chateau' || name == 'Butcher Shop') storage.scalpel = 'Butcher Shop';
     else storage.scalpel = 'Big Oak';
+
     for (let prop of Object.keys(storage)) storage[prop] = JSON.stringify(storage[prop]);
+
     return storage;
   }
 
   class Network {
-    constructor(connections, storageFor) {
+    constructor(connections, getStorageFor) {
       let reachable = Object.create(null);
+
       for (let [from, to] of connections.map((conn) => conn.split('-'))) {
         (reachable[from] || (reachable[from] = [])).push(to);
         (reachable[to] || (reachable[to] = [])).push(from);
       }
+
       this.nodes = Object.create(null);
+
       for (let name of Object.keys(reachable))
-        this.nodes[name] = new Node(name, reachable[name], this, storageFor(name));
+        this.nodes[name] = new Node(name, reachable[name], this, getStorageFor(name));
+
       this.types = Object.create(null);
     }
 
@@ -79,28 +89,32 @@ function boilerplate() {
     }
   }
 
-  const $storage = Symbol('storage'),
-    $network = Symbol('network');
-
   function ser(value) {
     return value == null ? null : JSON.parse(JSON.stringify(value));
   }
+
+  const $storage = Symbol('storage'),
+    $network = Symbol('network');
 
   class Node {
     constructor(name, neighbors, network, storage) {
       this.name = name;
       this.neighbors = neighbors;
       this[$network] = network;
-      this.state = Object.create(null);
       this[$storage] = storage;
+      this.state = Object.create(null);
     }
 
     send(to, type, message, callback) {
       let toNode = this[$network].nodes[to];
+
       if (!toNode || !this.neighbors.includes(to))
         return callback(new Error(`${to} is not reachable from ${this.name}`));
+
       let handler = this[$network].types[type];
+
       if (!handler) return callback(new Error('Unknown request type ' + type));
+
       if (Math.random() > 0.03)
         setTimeout(() => {
           try {
@@ -126,17 +140,18 @@ function boilerplate() {
     }
   }
 
-  let network = new Network(connections, storageFor);
-  const bigOak = network.nodes['Big Oak'];
+  const network = new Network(connections, getStorageFor);
+  const nests = network.nodes;
   const everywhere = network.everywhere.bind(network);
   const defineRequestType = network.defineRequestType.bind(network);
+  const types = network.types;
 
-  return { bigOak, everywhere, defineRequestType };
+  return { nests, everywhere, defineRequestType, types };
 }
 
 // 11_async.js code from https://eloquentjavascript.net/
 function exampleCode() {
-  const { bigOak, defineRequestType, everywhere } = boilerplate();
+  const { nests, defineRequestType, everywhere, types } = boilerplate();
 
   defineRequestType('note', (nest, content, source, done) => {
     console.log(`${nest.name} received note: ${content}`);
@@ -310,7 +325,21 @@ function exampleCode() {
     );
     return list;
   }
+
+  return { nests, defineRequestType, everywhere, types };
 }
 
 // Implementation
-exampleCode();
+function implementation() {
+  const { nests, defineRequestType, everywhere, types } = exampleCode();
+
+  nests['Big Oak'].send('Cow Pasture', 'note', 'Hello', (err, success) => {
+    if (err) {
+      console.error(err);
+    } else {
+      console.log(success);
+    }
+  });
+}
+
+implementation();
