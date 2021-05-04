@@ -153,38 +153,6 @@ function boilerplate() {
 function exampleCode() {
   const { nests, defineRequestType, everywhere, types } = boilerplate();
 
-  defineRequestType('note', (nest, content, source, done) => {
-    console.log(`${nest.name} received note: ${content}`);
-    done();
-  });
-
-  function storage(nest, name) {
-    return new Promise((resolve) => {
-      nest.readStorage(name, (result) => resolve(result));
-    });
-  }
-
-  let Timeout = class Timeout extends Error {};
-
-  function request(nest, target, type, content) {
-    return new Promise((resolve, reject) => {
-      let done = false;
-      function attempt(n) {
-        nest.send(target, type, content, (failed, value) => {
-          done = true;
-          if (failed) reject(failed);
-          else resolve(value);
-        });
-        setTimeout(() => {
-          if (done) return;
-          else if (n < 3) attempt(n + 1);
-          else reject(new Timeout('Timed out'));
-        }, 250);
-      }
-      attempt(1);
-    });
-  }
-
   function requestType(name, handler) {
     defineRequestType(name, (nest, content, source, callback) => {
       try {
@@ -197,6 +165,11 @@ function exampleCode() {
       }
     });
   }
+
+  defineRequestType('note', (nest, content, source, done) => {
+    console.log(`${nest.name} received note: ${content}`);
+    done();
+  });
 
   requestType('ping', () => 'pong');
 
@@ -219,6 +192,40 @@ function exampleCode() {
 
   requestType('storage', (nest, name) => storage(nest, name));
 
+  everywhere((nest) => {
+    nest.state.gossip = [];
+    nest.state.connections = new Map();
+    nest.state.connections.set(nest.name, nest.neighbors);
+    broadcastConnections(nest, nest.name);
+  });
+
+  let Timeout = class Timeout extends Error {};
+
+  function request(nest, target, type, content) {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      function attempt(n) {
+        nest.send(target, type, content, (failed, value) => {
+          done = true;
+          if (failed) reject(failed);
+          else resolve(value);
+        });
+        setTimeout(() => {
+          if (done) return;
+          else if (n < 3) attempt(n + 1);
+          else reject(new Timeout('Timed out'));
+        }, 250);
+      }
+      attempt(1);
+    });
+  }
+
+  function storage(nest, name) {
+    return new Promise((resolve) => {
+      nest.readStorage(name, (result) => resolve(result));
+    });
+  }
+
   function availableNeighbors(nest) {
     let requests = nest.neighbors.map((neighbor) => {
       return request(nest, neighbor, 'ping').then(
@@ -230,10 +237,6 @@ function exampleCode() {
       return nest.neighbors.filter((_, i) => result[i]);
     });
   }
-
-  everywhere((nest) => {
-    nest.state.gossip = [];
-  });
 
   function sendGossip(nest, message, exceptFor = null) {
     nest.state.gossip.push(message);
@@ -252,12 +255,6 @@ function exampleCode() {
       });
     }
   }
-
-  everywhere((nest) => {
-    nest.state.connections = new Map();
-    nest.state.connections.set(nest.name, nest.neighbors);
-    broadcastConnections(nest, nest.name);
-  });
 
   function findRoute(from, to, connections) {
     let work = [{ at: from, via: null }];
