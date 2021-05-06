@@ -179,25 +179,13 @@ function exampleCode() {
     sendGossip(nest, message, source);
   });
 
-  requestType('connections', (nest, { name, neighbors }, source) => {
-    let connections = nest.state.connections;
-    if (JSON.stringify(connections.get(name)) == JSON.stringify(neighbors)) return;
-    connections.set(name, neighbors);
-    broadcastConnections(nest, name, source);
-  });
-
-  requestType('route', (nest, { target, type, content }) => {
-    return routeRequest(nest, target, type, content);
-  });
-
-  requestType('storage', (nest, name) => storage(nest, name));
-
-  everywhere((nest) => {
-    nest.state.gossip = [];
-    nest.state.connections = new Map();
-    nest.state.connections.set(nest.name, nest.neighbors);
-    broadcastConnections(nest, nest.name);
-  });
+  function sendGossip(nest, message, exceptFor = null) {
+    nest.state.gossip.push(message);
+    for (let neighbor of nest.neighbors) {
+      if (neighbor == exceptFor) continue;
+      request(nest, neighbor, 'gossip', message);
+    }
+  }
 
   let Timeout = class Timeout extends Error {};
 
@@ -220,31 +208,12 @@ function exampleCode() {
     });
   }
 
-  function storage(nest, name) {
-    return new Promise((resolve) => {
-      nest.readStorage(name, (result) => resolve(result));
-    });
-  }
-
-  function availableNeighbors(nest) {
-    let requests = nest.neighbors.map((neighbor) => {
-      return request(nest, neighbor, 'ping').then(
-        () => true,
-        () => false
-      );
-    });
-    return Promise.all(requests).then((result) => {
-      return nest.neighbors.filter((_, i) => result[i]);
-    });
-  }
-
-  function sendGossip(nest, message, exceptFor = null) {
-    nest.state.gossip.push(message);
-    for (let neighbor of nest.neighbors) {
-      if (neighbor == exceptFor) continue;
-      request(nest, neighbor, 'gossip', message);
-    }
-  }
+  requestType('connections', (nest, { name, neighbors }, source) => {
+    let connections = nest.state.connections;
+    if (JSON.stringify(connections.get(name)) == JSON.stringify(neighbors)) return;
+    connections.set(name, neighbors);
+    broadcastConnections(nest, name, source);
+  });
 
   function broadcastConnections(nest, name, exceptFor = null) {
     for (let neighbor of nest.neighbors) {
@@ -253,6 +222,20 @@ function exampleCode() {
         name,
         neighbors: nest.state.connections.get(name),
       });
+    }
+  }
+
+  requestType('route', (nest, { target, type, content }) => {
+    return routeRequest(nest, target, type, content);
+  });
+
+  function routeRequest(nest, target, type, content) {
+    if (nest.neighbors.includes(target)) {
+      return request(nest, target, type, content);
+    } else {
+      let via = findRoute(nest.name, target, nest.state.connections);
+      if (!via) throw new Error(`No route to ${target}`);
+      return request(nest, via, 'route', { target, type, content });
     }
   }
 
@@ -270,14 +253,23 @@ function exampleCode() {
     return null;
   }
 
-  function routeRequest(nest, target, type, content) {
-    if (nest.neighbors.includes(target)) {
-      return request(nest, target, type, content);
-    } else {
-      let via = findRoute(nest.name, target, nest.state.connections);
-      if (!via) throw new Error(`No route to ${target}`);
-      return request(nest, via, 'route', { target, type, content });
-    }
+  requestType('storage', (nest, name) => storage(nest, name));
+
+  function storage(nest, name) {
+    return new Promise((resolve) => {
+      nest.readStorage(name, (result) => resolve(result));
+    });
+  }
+
+  everywhere((nest) => {
+    nest.state.gossip = [];
+    nest.state.connections = new Map();
+    nest.state.connections.set(nest.name, nest.neighbors);
+    broadcastConnections(nest, nest.name);
+  });
+
+  function network(nest) {
+    return Array.from(nest.state.connections.keys());
   }
 
   function findInStorage(nest, name) {
@@ -285,10 +277,6 @@ function exampleCode() {
       if (found != null) return found;
       else return findInRemoteStorage(nest, name);
     });
-  }
-
-  function network(nest) {
-    return Array.from(nest.state.connections.keys());
   }
 
   function findInRemoteStorage(nest, name) {
@@ -308,35 +296,66 @@ function exampleCode() {
     return next();
   }
 
+  function availableNeighbors(nest) {
+    let requests = nest.neighbors.map((neighbor) => {
+      return request(nest, neighbor, 'ping').then(
+        () => true,
+        () => false
+      );
+    });
+    return Promise.all(requests).then((result) => {
+      return nest.neighbors.filter((_, i) => result[i]);
+    });
+  }
+
   function anyStorage(nest, source, name) {
     if (source == nest.name) return storage(nest, name);
     else return routeRequest(nest, source, 'storage', name);
   }
 
   async function chicks(nest, year) {
-    let list = '';
-    await Promise.all(
-      network(nest).map(async (name) => {
-        list += `${name}: ${await anyStorage(nest, name, `chicks in ${year}`)}\n`;
-      })
-    );
-    return list;
+    let lines = network(nest).map(async (name) => {
+      return name + ': ' + (await anyStorage(nest, name, `chicks in ${year}`));
+    });
+
+    return (await Promise.all(lines)).join('\n');
   }
 
-  return { nests, defineRequestType, everywhere, types };
+  return {
+    nests,
+    anyStorage,
+    storage,
+  };
 }
 
 // Implementation
-function implementation() {
-  const { nests, defineRequestType, everywhere, types } = exampleCode();
+(function () {
+  const { nests, anyStorage, storage } = exampleCode();
 
-  nests['Big Oak'].send('Cow Pasture', 'note', 'Hello', (err, success) => {
-    if (err) {
-      console.error(err);
-    } else {
-      console.log(success);
+  async function locateScalpel(nest) {
+    let currentNest = nest.name;
+    let location = await storage(nest, 'scalpel');
+
+    while (location !== currentNest) {
+      currentNest = location;
+      location = await anyStorage(nest, location, 'scalpel');
     }
-  });
-}
 
-implementation();
+    return location;
+  }
+
+  function locateScalpel2(nest) {
+    return storage(nest, 'scalpel').then((location) => {
+      function locate(current, location) {
+        return current === location
+          ? location
+          : anyStorage(nest, location, 'scalpel').then((l) => locate(location, l));
+      }
+
+      return locate(nest.name, location);
+    });
+  }
+
+  locateScalpel(nests['Big Oak']).then(console.log, console.error);
+  locateScalpel2(nests['Big Oak']).then(console.log, console.error);
+})();
