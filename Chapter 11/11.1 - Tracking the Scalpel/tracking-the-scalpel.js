@@ -324,17 +324,16 @@ function exampleCode() {
   return {
     nests,
     anyStorage,
-    storage,
   };
 }
 
 // Implementation
 (function () {
-  const { nests, anyStorage, storage } = exampleCode();
+  const { nests, anyStorage } = exampleCode();
 
   async function locateScalpel(nest) {
     let currentNest = nest.name;
-    let location = await storage(nest, 'scalpel');
+    let location = await anyStorage(nest, currentNest, 'scalpel');
 
     while (location !== currentNest) {
       currentNest = location;
@@ -345,7 +344,7 @@ function exampleCode() {
   }
 
   function locateScalpel2(nest) {
-    return storage(nest, 'scalpel').then((location) => {
+    return anyStorage(nest, nest.name, 'scalpel').then((location) => {
       function locate(current, location) {
         return current === location
           ? location
