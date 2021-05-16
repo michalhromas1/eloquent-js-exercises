@@ -3,3 +3,4 @@ Solved exercises from the book Eloquent Javascript (3rd Edition) by Marijn Haver
 
 Digital version of the book can be found at: https://eloquentjavascript.net
 
+![Book cover](https://eloquentjavascript.net/img/cover.jpg)
