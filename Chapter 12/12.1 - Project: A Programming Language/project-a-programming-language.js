@@ -184,4 +184,35 @@ do(define(sum, fun(array,
         sum))),
    print(sum(array(1, 2, 3))))
 `);
+
+  specialForms.set = (args, scope) => {
+    if (args.length != 2 || args[0].type != 'word') {
+      throw new SyntaxError('Incorrect use of set');
+    }
+
+    let value = evaluate(args[1], scope);
+    const name = args[0].name;
+
+    let prototype = scope;
+    do {
+      if (Object.prototype.hasOwnProperty.call(prototype, name)) {
+        prototype[name] = value;
+        return value;
+      }
+
+      scope = prototype;
+    } while ((prototype = Object.getPrototypeOf(scope)));
+
+    throw new ReferenceError('Unknown binding');
+  };
+
+  run(`
+do(define(x, 4),
+   define(setx, fun(val, set(x, val))),
+   setx(50),
+   print(x))
+`);
+
+  // Throws reference error
+  // run(`set(quux, true)`);
 })();
